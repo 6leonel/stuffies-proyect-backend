@@ -19,11 +19,15 @@ public class ProductService {
 
     public Product findById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + id));
     }
 
     public Product create(Product product) {
+        // aseguramos que se cree uno nuevo
         product.setId(null);
+
+        product.setActivo(true);
+
         return productRepository.save(product);
     }
 

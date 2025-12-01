@@ -31,5 +31,6 @@ public class Product {
     @Column(length = 500)
     private String imageUrl;
 
+    // para activar/desactivar productos sin borrarlos
     private boolean activo = true;
 }

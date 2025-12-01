@@ -1,9 +1,9 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.config;
 
-import cl.duoc.stuffies.stuffiesproyectbackend.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -16,7 +16,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -24,36 +23,48 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
+    // usamos tu servicio existente para login
     private final UserDetailsService customUserDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+                // API → sin CSRF
                 .csrf(csrf -> csrf.disable())
+
+                // stateless (opcional, pero lo dejamos)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authorizeHttpRequests(auth -> auth
 
-                        // 👉 ENDPOINTS PÚBLICOS (sin JWT)
+                .authorizeHttpRequests(auth -> auth
+                        // Swagger
                         .requestMatchers(
+                                "/v3/api-docs",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/auth/register",
-                                "/auth/login"
+                                "/swagger-ui/**"
                         ).permitAll()
 
-                        // 👉 TODO lo demás requiere estar autenticado con JWT
-                        .anyRequest().authenticated()
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                        // auth público
+                        .requestMatchers("/auth/**").permitAll()
+
+                        // productos GET publico
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+
+                        // TODO LO DEMÁS TAMBIÉN PÚBLICO POR AHORA
+                        .anyRequest().permitAll()
+                );
+
+        // 👀 Importante: aquí NO agregamos JwtAuthFilter
+        // ni .authenticationProvider(...) – lo usamos sólo
+        // para AuthenticationManager más abajo.
 
         return http.build();
     }
+
+    // ==== LO SIGUIENTE ES PARA QUE LOGIN SIGA FUNCIONANDO ====
 
     @Bean
     public AuthenticationProvider authenticationProvider() {

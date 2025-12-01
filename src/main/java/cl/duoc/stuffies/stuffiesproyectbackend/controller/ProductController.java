@@ -1,8 +1,10 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.controller;
 
 import cl.duoc.stuffies.stuffiesproyectbackend.entity.Product;
-import cl.duoc.stuffies.stuffiesproyectbackend.repository.ProductRepository;
+import cl.duoc.stuffies.stuffiesproyectbackend.service.ProductService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,62 +12,50 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
-@SecurityRequirement(name = "bearerAuth") // Swagger pedirá JWT para estos endpoints
+@RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth") // para Swagger
+@CrossOrigin(origins = "http://localhost:5173") // React Vite
 public class ProductController {
 
-    private final ProductRepository productRepository;
-
-    public ProductController(ProductRepository productRepository) {
-        this.productRepository = productRepository;
-    }
+    private final ProductService productService;
 
     // GET /api/products  -> lista todos
     @GetMapping
     public List<Product> getAll() {
-        return productRepository.findAll();
+        return productService.findAll();
     }
 
-    // GET /api/products/{id}  -> busca por id
+    // GET /api/products/{id}
     @GetMapping("/{id}")
     public ResponseEntity<Product> getById(@PathVariable Long id) {
-        return productRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return ResponseEntity.ok(productService.findById(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    // POST /api/products  -> crea producto nuevo
+    // POST /api/products  -> crear
     @PostMapping
     public ResponseEntity<Product> create(@RequestBody Product product) {
-        Product saved = productRepository.save(product);
-        return ResponseEntity.ok(saved);
+        Product created = productService.create(product);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    // PUT /api/products/{id}  -> actualiza producto
+    // PUT /api/products/{id} -> actualizar
     @PutMapping("/{id}")
     public ResponseEntity<Product> update(
             @PathVariable Long id,
-            @RequestBody Product productRequest
+            @RequestBody Product product
     ) {
-        return productRepository.findById(id)
-                .map(p -> {
-                    p.setNombre(productRequest.getNombre());
-                    p.setDescripcion(productRequest.getDescripcion());
-                    p.setPrecio(productRequest.getPrecio());
-                    p.setCategoria(productRequest.getCategoria());
-                    p.setImageUrl(productRequest.getImageUrl());
-                    p.setActivo(productRequest.isActivo());
-                    return ResponseEntity.ok(productRepository.save(p));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        Product updated = productService.update(id, product);
+        return ResponseEntity.ok(updated);
     }
 
-    // DELETE /api/products/{id}  -> elimina producto
+    // DELETE /api/products/{id} -> borrar
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!productRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        productRepository.deleteById(id);
+        productService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
