@@ -28,7 +28,9 @@ public class AuthService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    // ==========================
     // LOGIN
+    // ==========================
     public AuthResponse login(AuthRequest request) {
 
         Authentication auth = authenticationManager.authenticate(
@@ -46,12 +48,15 @@ public class AuthService {
         AuthResponse response = new AuthResponse();
         response.setToken(token);
         response.setUsername(user.getUsername());
+        // 👇 DEVOLVEMOS EXACTAMENTE EL ROL QUE ESTÁ EN LA BD
         response.setRole(user.getRole());
 
         return response;
     }
 
+    // ==========================
     // REGISTER
+    // ==========================
     public AuthResponse register(RegisterRequest request) {
 
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -60,8 +65,29 @@ public class AuthService {
 
         User user = new User();
         user.setUsername(request.getUsername());
+
+        // Si tu entidad User tiene email, descomenta esta línea:
+        // user.setEmail(request.getEmail());
+
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole("ROLE_USER");
+
+        // --------------------------
+        // MANEJO DE ROL EN EL REGISTRO
+        // --------------------------
+        String role = request.getRole();
+
+        // Si no viene rol, por defecto ROLE_USER
+        if (role == null || role.isBlank()) {
+            role = "ROLE_USER";
+        } else {
+            // Normalizamos: si ponen "ADMIN", lo convertimos a "ROLE_ADMIN"
+            role = role.trim().toUpperCase();
+            if (!role.startsWith("ROLE_")) {
+                role = "ROLE_" + role;
+            }
+        }
+
+        user.setRole(role);
 
         userRepository.save(user);
 
