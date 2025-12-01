@@ -1,6 +1,6 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.config;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,11 +20,11 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     // usamos tu servicio existente para login
-    private final UserDetailsService customUserDetailsService;
+    @Autowired
+    private UserDetailsService customUserDetailsService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -42,25 +42,22 @@ public class SecurityConfig {
                         // Swagger
                         .requestMatchers(
                                 "/v3/api-docs",
-                                "/v3/api-docs/**",
+                                "/v3/api-docs/",
                                 "/swagger-ui.html",
-                                "/swagger-ui/**"
+                                "/swagger-ui/"
                         ).permitAll()
 
                         // auth público
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/").permitAll()
 
-                        // productos GET publico
-                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        // productos GET público
+                        .requestMatchers(HttpMethod.GET, "/api/products/").permitAll()
 
                         // TODO LO DEMÁS TAMBIÉN PÚBLICO POR AHORA
                         .anyRequest().permitAll()
                 );
 
-        // 👀 Importante: aquí NO agregamos JwtAuthFilter
-        // ni .authenticationProvider(...) – lo usamos sólo
-        // para AuthenticationManager más abajo.
-
+        // Aquí no agregamos JwtAuthFilter ni authenticationProvider al http
         return http.build();
     }
 
