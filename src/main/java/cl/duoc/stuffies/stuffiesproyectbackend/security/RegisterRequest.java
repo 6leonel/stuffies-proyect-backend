@@ -1,16 +1,8 @@
-package cl.duoc.stuffies.stuffiesproyectbackend.entity;
+package cl.duoc.stuffies.stuffiesproyectbackend.security;
 
-import jakarta.persistence.*;
+public class RegisterRequest {
 
-@Entity
-@Table(name = "users")
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    private String rut;        // 12345678-9
+    private String rut;
     private String nombre;
     private String apellido;
     private String email;
@@ -19,20 +11,10 @@ public class User {
     private String username;
     private String password;
 
-    // ROLE_CLIENTE | ROLE_ADMIN | ROLE_VENDEDOR, etc
+    // valores que vas a mandar desde el front: "cliente", "vendedor", "admin"
     private String role;
 
-    public User() {
-    }
-
-    // ==== GETTERS / SETTERS ====
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public RegisterRequest() {
     }
 
     public String getRut() {

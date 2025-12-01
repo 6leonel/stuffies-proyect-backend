@@ -48,10 +48,10 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // auth público
-                        .requestMatchers("/auth/").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
 
                         // productos GET público
-                        .requestMatchers(HttpMethod.GET, "/api/products/").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 
                         // TODO LO DEMÁS TAMBIÉN PÚBLICO POR AHORA
                         .anyRequest().permitAll()

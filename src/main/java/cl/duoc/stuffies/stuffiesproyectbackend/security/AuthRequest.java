@@ -1,4 +1,3 @@
-// src/main/java/cl/duoc/stuffies/stuffiesproyectbackend/security/AuthRequest.java
 package cl.duoc.stuffies.stuffiesproyectbackend.security;
 
 public class AuthRequest {
