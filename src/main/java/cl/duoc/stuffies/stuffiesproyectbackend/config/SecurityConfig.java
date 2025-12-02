@@ -35,9 +35,13 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
+    // ==========================
+    //       CORS GLOBAL
+    // ==========================
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
+
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://stuffies-frontend.s3-website.us-east-2.amazonaws.com",
@@ -45,16 +49,20 @@ public class SecurityConfig {
                 "http://stuffies-frontend.s3.us-east-2.amazonaws.com",
                 "https://stuffies-frontend.s3.us-east-2.amazonaws.com"
         ));
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 
-
+    // ==========================
+    //     SECURITY FILTERS
+    // ==========================
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -66,23 +74,24 @@ public class SecurityConfig {
         );
 
         http.authorizeHttpRequests(auth -> auth
-                // SWAGGER
+
+                // Swagger público
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-                // AUTH
+                // Auth público
                 .requestMatchers("/auth/**").permitAll()
 
-                // PRODUCTS (públicos GET)
+                // Productos públicos GET
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 
-                // ORDERS
+                // Órdenes
                 .requestMatchers(HttpMethod.POST, "/api/ordenes").permitAll()
                 .requestMatchers("/api/ordenes/mine").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/ordenes").hasAnyRole("ADMIN", "VENDEDOR")
                 .requestMatchers(HttpMethod.GET, "/api/ordenes/**").hasAnyRole("ADMIN", "VENDEDOR")
                 .requestMatchers(HttpMethod.DELETE, "/api/ordenes/**").hasRole("ADMIN")
 
-                // OTRAS RUTAS
+                // Todo lo demás permitido
                 .anyRequest().permitAll()
         );
 
@@ -91,6 +100,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // ==========================
+    //  AUTHENTICATION PROVIDER
+    // ==========================
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
