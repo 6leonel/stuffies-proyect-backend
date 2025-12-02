@@ -1,16 +1,20 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.config;
 
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @SecurityScheme(
         name = "bearerAuth",
         type = SecuritySchemeType.HTTP,
-        bearerFormat = "JWT",
-        scheme = "bearer"
+        scheme = "bearer",
+        bearerFormat = "JWT"
+)
+@OpenAPIDefinition(
+        security = @SecurityRequirement(name = "bearerAuth")
 )
 public class OpenApiConfig {
-    // Solo configura el esquema de seguridad para Swagger
 }

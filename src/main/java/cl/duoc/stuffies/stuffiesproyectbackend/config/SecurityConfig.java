@@ -1,5 +1,6 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.config;
 
+import cl.duoc.stuffies.stuffiesproyectbackend.security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,59 +17,79 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    // usamos tu servicio existente para login
     @Autowired
     private UserDetailsService customUserDetailsService;
+
+    @Autowired
+    private JwtAuthFilter jwtAuthFilter;
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http
-                // API → sin CSRF
-                .csrf(csrf -> csrf.disable())
+        http.csrf(csrf -> csrf.disable());
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-                // stateless (opcional, pero lo dejamos)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+        http.sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        );
 
-                .authorizeHttpRequests(auth -> auth
-                        // Swagger
-                        .requestMatchers(
-                                "/v3/api-docs",
-                                "/v3/api-docs/",
-                                "/swagger-ui.html",
-                                "/swagger-ui/"
-                        ).permitAll()
+        http.authorizeHttpRequests(auth -> auth
+                // SWAGGER
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-                        // auth público
-                        .requestMatchers("/auth/**").permitAll()
+                // AUTH
+                .requestMatchers("/auth/**").permitAll()
 
-                        // productos GET público
-                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                // PRODUCTS (públicos GET)
+                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 
-                        // TODO LO DEMÁS TAMBIÉN PÚBLICO POR AHORA
-                        .anyRequest().permitAll()
-                );
+                // ORDERS
+                .requestMatchers(HttpMethod.POST, "/api/ordenes").permitAll()
+                .requestMatchers("/api/ordenes/mine").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/ordenes").hasAnyRole("ADMIN", "VENDEDOR")
+                .requestMatchers(HttpMethod.GET, "/api/ordenes/**").hasAnyRole("ADMIN", "VENDEDOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/ordenes/**").hasRole("ADMIN")
 
-        // Aquí no agregamos JwtAuthFilter ni authenticationProvider al http
+                // OTRAS RUTAS
+                .anyRequest().permitAll()
+        );
+
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
-    // ==== LO SIGUIENTE ES PARA QUE LOGIN SIGA FUNCIONANDO ====
-
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(customUserDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(customUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
     }
 
     @Bean

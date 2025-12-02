@@ -6,12 +6,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -31,42 +33,45 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // Si no viene header o no empieza con Bearer, seguimos normal
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Sacamos el token sin el "Bearer "
         final String jwt = authHeader.substring(7);
-        final String username;
 
+        String username;
         try {
             username = jwtService.extractUsername(jwt);
         } catch (Exception ex) {
-            // token inválido → seguimos sin autenticar
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Si hay username y aún no hay auth en el contexto
+        // Si aún no hay autenticación
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            // === 1) Obtener roles desde el token ===
+            List<String> roles = jwtService.extractRoles(jwt);
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-            if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (roles != null) {
+                for (String r : roles) {
+                    authorities.add(new SimpleGrantedAuthority(r));
+                }
             }
+
+            // === 2) Crear autenticación basado en el token ===
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(
+                            username, // principal
+                            null,
+                            authorities
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authToken);
         }
 
-        // Continuamos con la cadena de filtros
         filterChain.doFilter(request, response);
     }
 }
