@@ -1,6 +1,10 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "products")
@@ -25,17 +29,19 @@ public class Product {
     @Column(length = 500)
     private String imageUrl;
 
-    // NUEVO: tallas como texto, por ejemplo "S,M,L,XL"
     @Column(length = 100)
     private String tallas;
 
-    // NUEVO: stock total del producto
     @Column(nullable = false)
     private Integer stock = 0;
 
-    // para activar/desactivar productos sin borrarlos
     @Column(nullable = false)
     private boolean activo = true;
+
+    // NUEVO: relación 1..N con variantes
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties("product") // evita recursión
+    private List<ProductVariant> variants = new ArrayList<>();
 
     // ======= CONSTRUCTORES =======
     public Product() {
@@ -133,5 +139,13 @@ public class Product {
 
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public List<ProductVariant> getVariants() {
+        return variants;
+    }
+
+    public void setVariants(List<ProductVariant> variants) {
+        this.variants = variants;
     }
 }
