@@ -1,6 +1,9 @@
 package cl.duoc.stuffies.stuffiesproyectbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,21 +17,23 @@ public class Order {
 
     private Integer total;
 
-    // Datos del cliente (checkout)
     private String clienteNombre;
     private String clienteEmail;
     private String clienteDireccion;
     private String clienteTelefono;
 
-    // Estado / Pago
     private String estado;
     private String medioPago;
+
+    @Column(name = "fecha_creacion")
+    private LocalDateTime fechaCreacion;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference   // <<--- Corta la recursión hacia OrderItem
     private List<OrderItem> items = new ArrayList<>();
 
     public Order() {}
@@ -56,6 +61,9 @@ public class Order {
 
     public String getMedioPago() { return medioPago; }
     public void setMedioPago(String medioPago) { this.medioPago = medioPago; }
+
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
