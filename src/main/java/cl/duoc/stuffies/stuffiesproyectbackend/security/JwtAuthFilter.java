@@ -8,12 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -33,38 +34,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // 🔹 SIN TOKEN → seguir cadena
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         final String jwt = authHeader.substring(7);
-
         String username;
+
         try {
             username = jwtService.extractUsername(jwt);
-        } catch (Exception ex) {
+        } catch (Exception e) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Si aún no hay autenticación
+        // 🔴 CLAVE: solo si NO hay autenticación previa
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            // === 1) Obtener roles desde el token ===
+            // 🔹 CARGAR USUARIO REAL DESDE BD
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            // 🔹 ROLES DESDE TOKEN
             List<String> roles = jwtService.extractRoles(jwt);
-            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-            if (roles != null) {
-                for (String r : roles) {
-                    authorities.add(new SimpleGrantedAuthority(r));
-                }
-            }
+            List<SimpleGrantedAuthority> authorities = roles == null
+                    ? List.of()
+                    : roles.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
 
-            // === 2) Crear autenticación basado en el token ===
+            // 🔴 CLAVE: principal = userDetails (NO username string)
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(
-                            username, // principal
+                            userDetails,
                             null,
                             authorities
                     );

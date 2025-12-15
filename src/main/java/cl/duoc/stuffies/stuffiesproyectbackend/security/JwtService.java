@@ -26,15 +26,18 @@ public class JwtService {
     }
 
     // ====================================
-    // GENERAR TOKEN CON ROLES EN ARRAY
+    // GENERAR TOKEN (ROL DESDE BD)
     // ====================================
     public String generateToken(User user) {
 
         Map<String, Object> claims = new HashMap<>();
 
-        // ⚠ IMPORTANTE: almacenar roles como ARRAY
+        // 🔴 ROL VIENE DIRECTO DESDE BD (ROLE_ADMIN, ROLE_VENDEDOR, ROLE_CLIENTE)
         List<String> roles = new ArrayList<>();
-        roles.add("ROLE_" + user.getRole());  // ejemplo: ADMIN → ROLE_ADMIN
+
+        if (user.getRole() != null && !user.getRole().isBlank()) {
+            roles.add(user.getRole());
+        }
 
         claims.put("roles", roles);
 

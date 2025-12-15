@@ -5,6 +5,7 @@ import cl.duoc.stuffies.stuffiesproyectbackend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -15,19 +16,40 @@ public class UserService {
         this.repo = repo;
     }
 
+    // ==========================
+    // LISTAR TODOS (ADMIN)
+    // ==========================
     public List<User> findAll() {
         return repo.findAll();
     }
 
-    public User findById(Long id) {
-        return repo.findById(id).orElse(null);
+    // ==========================
+    // BUSCAR POR ID (ADMIN)
+    // ==========================
+    public Optional<User> findById(Long id) {
+        return repo.findById(id);
     }
 
-    public User save(User u) {
-        return repo.save(u);
+    // ==========================
+    // BUSCAR POR USERNAME (CLAVE)
+    // ==========================
+    public Optional<User> findByUsername(String username) {
+        return repo.findByUsername(username);
     }
 
+    // ==========================
+    // GUARDAR / ACTUALIZAR
+    // ==========================
+    public User save(User user) {
+        return repo.save(user);
+    }
+
+    // ==========================
+    // ELIMINAR (ADMIN)
+    // ==========================
     public void delete(Long id) {
-        repo.deleteById(id);
+        if (repo.existsById(id)) {
+            repo.deleteById(id);
+        }
     }
 }

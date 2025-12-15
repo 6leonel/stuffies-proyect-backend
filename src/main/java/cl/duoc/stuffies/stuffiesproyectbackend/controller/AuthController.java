@@ -5,8 +5,10 @@ import cl.duoc.stuffies.stuffiesproyectbackend.security.AuthResponse;
 import cl.duoc.stuffies.stuffiesproyectbackend.security.RegisterRequest;
 import cl.duoc.stuffies.stuffiesproyectbackend.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/auth")
@@ -20,43 +22,46 @@ public class AuthController {
     // LOGIN
     // ============================
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody AuthRequest request) {
-        try {
-            AuthResponse response = authService.login(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(401)
-                    .body("Usuario o contraseña incorrectos");
-        }
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
+
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
     // ============================
     // REGISTRO
     // ============================
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+
+        if (request.getUsername() == null || request.getUsername().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (request.getRole() == null || request.getRole().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // Normalizamos rol SOLO para validar
+        String role = request.getRole().trim().toUpperCase();
+        if (!role.equals("CLIENTE") && !role.equals("VENDEDOR") && !role.equals("ADMIN")) {
+            return ResponseEntity.badRequest().build();
+        }
+
         try {
-            // Validaciones mínimas
-            if (request.getUsername() == null || request.getUsername().isBlank()) {
-                return ResponseEntity.badRequest().body("El usuario es obligatorio");
-            }
-
-            if (request.getPassword() == null || request.getPassword().isBlank()) {
-                return ResponseEntity.badRequest().body("La contraseña es obligatoria");
-            }
-
-            if (request.getEmail() == null || request.getEmail().isBlank()) {
-                return ResponseEntity.badRequest().body("El correo es obligatorio");
-            }
-
             AuthResponse newUser = authService.register(request);
-            return ResponseEntity.ok(newUser);
+            return ResponseEntity.status(HttpStatus.CREATED).body(newUser);
 
-        } catch (Exception e) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("No se pudo registrar el usuario: " + e.getMessage());
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).build();
         }
     }
 }

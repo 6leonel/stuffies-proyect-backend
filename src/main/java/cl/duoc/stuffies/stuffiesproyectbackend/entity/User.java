@@ -3,30 +3,61 @@ package cl.duoc.stuffies.stuffiesproyectbackend.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "username"),
+                @UniqueConstraint(columnNames = "email")
+        }
+)
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String rut;        // 12345678-9
+    // =========================
+    // DATOS PERSONALES
+    // =========================
+    @Column(length = 20)
+    private String rut;
+
+    @Column(nullable = false)
     private String nombre;
+
+    @Column(nullable = false)
     private String apellido;
+
+    @Column(nullable = false)
     private String email;
+
     private String direccion;
 
+    // =========================
+    // CREDENCIALES
+    // =========================
+    @Column(nullable = false)
     private String username;
+
+    @Column(nullable = false)
     private String password;
 
-    // ROLE_CLIENTE | ROLE_ADMIN | ROLE_VENDEDOR, etc
+    /**
+     * ROLE_CLIENTE | ROLE_ADMIN | ROLE_VENDEDOR
+     * ⚠️ SIEMPRE debe venir NORMALIZADO con ROLE_
+     */
+    @Column(nullable = false)
     private String role;
 
+    // =========================
+    // CONSTRUCTOR
+    // =========================
     public User() {
     }
 
-    // ==== GETTERS / SETTERS ====
-
+    // =========================
+    // GETTERS / SETTERS
+    // =========================
     public Long getId() {
         return id;
     }
@@ -83,6 +114,7 @@ public class User {
         this.username = username;
     }
 
+    // ⚠️ NUNCA EXPONGAS PASSWORD EN RESPUESTAS
     public String getPassword() {
         return password;
     }
@@ -91,11 +123,19 @@ public class User {
         this.password = password;
     }
 
+    // 🔴 ESTE MÉTODO ERA CLAVE PARA TU ERROR
     public String getRole() {
         return role;
     }
 
+    // 🔴 NORMALIZA EL ROL SIEMPRE
     public void setRole(String role) {
-        this.role = role;
+        if (role == null || role.isBlank()) {
+            this.role = "ROLE_CLIENTE";
+        } else if (!role.startsWith("ROLE_")) {
+            this.role = "ROLE_" + role.toUpperCase();
+        } else {
+            this.role = role.toUpperCase();
+        }
     }
 }

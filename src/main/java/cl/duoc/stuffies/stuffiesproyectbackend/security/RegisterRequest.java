@@ -11,7 +11,16 @@ public class RegisterRequest {
     private String username;
     private String password;
 
-    // valores que vas a mandar desde el front: "cliente", "vendedor", "admin"
+    /**
+     * Rol elegido en el registro.
+     * Valores esperados desde el frontend:
+     * - cliente
+     * - vendedor
+     * - admin
+     *
+     * La normalización a ROLE_CLIENTE / ROLE_VENDEDOR / ROLE_ADMIN
+     * se hace en AuthService (NO aquí).
+     */
     private String role;
 
     public RegisterRequest() {

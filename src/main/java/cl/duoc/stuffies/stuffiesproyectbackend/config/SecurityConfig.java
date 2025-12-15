@@ -19,8 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -36,7 +36,7 @@ public class SecurityConfig {
     private JwtAuthFilter jwtAuthFilter;
 
     // ==========================
-    //       CORS GLOBAL
+    // CORS
     // ==========================
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -61,7 +61,7 @@ public class SecurityConfig {
     }
 
     // ==========================
-    //     SECURITY FILTERS
+    // SECURITY
     // ==========================
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -75,24 +75,39 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests(auth -> auth
 
-                // Swagger público
+                // Swagger
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
-                // Auth público
+                // Auth
                 .requestMatchers("/auth/**").permitAll()
 
-                // Productos públicos GET
+                // Productos públicos
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
 
                 // Órdenes
                 .requestMatchers(HttpMethod.POST, "/api/ordenes").permitAll()
                 .requestMatchers("/api/ordenes/mine").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/ordenes").hasAnyRole("ADMIN", "VENDEDOR")
-                .requestMatchers(HttpMethod.GET, "/api/ordenes/**").hasAnyRole("ADMIN", "VENDEDOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/ordenes/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/ordenes/**")
+                .hasAnyRole("ADMIN", "VENDEDOR")
+                .requestMatchers(HttpMethod.DELETE, "/api/ordenes/**")
+                .hasRole("ADMIN")
 
-                // Todo lo demás permitido
-                .anyRequest().permitAll()
+                // 🔴 PERFIL LOGEADO (ME) → CUALQUIER USUARIO AUTENTICADO
+                .requestMatchers("/api/users/me").authenticated()
+
+                // 🔴 USUARIOS ADMIN (listar, editar, eliminar)
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
+
+                // Reportes
+                .requestMatchers("/api/reportes/**")
+                .hasAnyRole("ADMIN", "VENDEDOR")
+
+                // Productos: eliminar solo ADMIN
+                .requestMatchers(HttpMethod.DELETE, "/api/products/**")
+                .hasRole("ADMIN")
+
+                // Todo lo demás requiere login
+                .anyRequest().authenticated()
         );
 
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -101,7 +116,7 @@ public class SecurityConfig {
     }
 
     // ==========================
-    //  AUTHENTICATION PROVIDER
+    // AUTH PROVIDER
     // ==========================
     @Bean
     public AuthenticationProvider authenticationProvider() {

@@ -6,8 +6,7 @@ public class AuthResponse {
     private String username;
     private String role;
 
-    public AuthResponse() {
-    }
+    public AuthResponse() {}
 
     public String getToken() {
         return token;
