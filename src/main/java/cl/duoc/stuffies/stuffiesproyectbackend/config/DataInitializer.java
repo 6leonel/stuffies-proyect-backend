@@ -19,9 +19,9 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
 
-        // si ya existe, no volvemos a crear
+        // Si ya existe, no crear nuevamente
         if (userRepository.existsByUsername("adminstuffies")) {
             return;
         }
@@ -29,7 +29,14 @@ public class DataInitializer implements CommandLineRunner {
         User admin = new User();
         admin.setUsername("adminstuffies");
         admin.setPassword(passwordEncoder.encode("1234"));
-        admin.setRole("ROLE_ADMIN");  // un solo rol
+        admin.setRole("ROLE_ADMIN");
+
+        // ✅ CAMPOS OBLIGATORIOS
+        admin.setNombre("Administrador");
+        admin.setApellido("Stuffies");
+        admin.setEmail("admin@stuffies.com");
+        admin.setDireccion("Sin direccion");
+        admin.setRut("11111111-1");
 
         userRepository.save(admin);
     }

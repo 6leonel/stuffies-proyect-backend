@@ -18,11 +18,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,81 +31,83 @@ public class SecurityConfig {
     private JwtAuthFilter jwtAuthFilter;
 
     // ==========================
-    // CORS
-    // ==========================
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://stuffies-frontend.s3-website.us-east-2.amazonaws.com",
-                "https://stuffies-frontend.s3-website.us-east-2.amazonaws.com",
-                "http://stuffies-frontend.s3.us-east-2.amazonaws.com",
-                "https://stuffies-frontend.s3.us-east-2.amazonaws.com"
-        ));
-
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-
-        return source;
-    }
-
-    // ==========================
-    // SECURITY
+    // SECURITY FILTER CHAIN
     // ==========================
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http.csrf(csrf -> csrf.disable());
-        http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {}) // usa el CorsConfigurationSource global
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
 
-        http.sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        );
+                .authorizeHttpRequests(auth -> auth
 
-        http.authorizeHttpRequests(auth -> auth
+                        // ==========================
+                        // SWAGGER
+                        // ==========================
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
 
-                // Swagger
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // ==========================
+                        // AUTH
+                        // ==========================
+                        .requestMatchers("/auth/**").permitAll()
 
-                // Auth
-                .requestMatchers("/auth/**").permitAll()
+                        // ==========================
+                        // PRODUCTOS (PÚBLICO)
+                        // ==========================
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/*/variants").permitAll()
 
-                // Productos públicos
-                .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        // ==========================
+                        // ÓRDENES (COMPRAS SIN LOGIN)
+                        // ==========================
+                        .requestMatchers(HttpMethod.POST, "/api/orders").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/ordenes").permitAll()
 
-                // Órdenes
-                .requestMatchers(HttpMethod.POST, "/api/ordenes").permitAll()
-                .requestMatchers("/api/ordenes/mine").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/ordenes/**")
-                .hasAnyRole("ADMIN", "VENDEDOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/ordenes/**")
-                .hasRole("ADMIN")
+                        // ✅ BOLETA DESDE CHECKOUT (FIX)
+                        .requestMatchers(HttpMethod.GET, "/api/orders/*").permitAll()
 
-                // 🔴 PERFIL LOGEADO (ME) → CUALQUIER USUARIO AUTENTICADO
-                .requestMatchers("/api/users/me").authenticated()
+                        // ==========================
+                        // ÓRDENES PRIVADAS
+                        // ==========================
+                        .requestMatchers("/api/ordenes/mine").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/ordenes/**")
+                        .hasAnyRole("ADMIN", "VENDEDOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/ordenes/**")
+                        .hasRole("ADMIN")
 
-                // 🔴 USUARIOS ADMIN (listar, editar, eliminar)
-                .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        // ==========================
+                        // USUARIO
+                        // ==========================
+                        .requestMatchers("/api/users/me").authenticated()
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
 
-                // Reportes
-                .requestMatchers("/api/reportes/**")
-                .hasAnyRole("ADMIN", "VENDEDOR")
+                        // ==========================
+                        // REPORTES
+                        // ==========================
+                        .requestMatchers("/api/reportes/**")
+                        .hasAnyRole("ADMIN", "VENDEDOR")
 
-                // Productos: eliminar solo ADMIN
-                .requestMatchers(HttpMethod.DELETE, "/api/products/**")
-                .hasRole("ADMIN")
+                        // ==========================
+                        // PRODUCTOS ADMIN
+                        // ==========================
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/**")
+                        .hasRole("ADMIN")
 
-                // Todo lo demás requiere login
-                .anyRequest().authenticated()
-        );
+                        // ==========================
+                        // TODO LO DEMÁS
+                        // ==========================
+                        .anyRequest().authenticated()
+                )
 
-        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -132,7 +129,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config
+    ) throws Exception {
         return config.getAuthenticationManager();
     }
 }
